@@ -34,8 +34,8 @@ impl ScalingRenderer {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Nearest,
-            min_filter: wgpu::FilterMode::Nearest,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
             mipmap_filter: wgpu::FilterMode::Nearest,
             lod_min_clamp: 0.0,
             lod_max_clamp: 1.0,
@@ -230,11 +230,11 @@ impl ScalingMatrix {
         let (texture_width, texture_height) = texture_size;
         let (screen_width, screen_height) = screen_size;
 
-        let width_ratio = (screen_width / texture_width).max(1.0);
-        let height_ratio = (screen_height / texture_height).max(1.0);
+        let width_ratio = screen_width / texture_width;
+        let height_ratio = screen_height / texture_height;
 
         // Get smallest scale size
-        let scale = width_ratio.clamp(1.0, height_ratio).floor();
+        let scale = width_ratio.min( height_ratio);
 
         let scaled_width = texture_width * scale;
         let scaled_height = texture_height * scale;

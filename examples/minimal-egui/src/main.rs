@@ -3,8 +3,10 @@
 
 use crate::gui::Framework;
 use error_iter::ErrorIter as _;
+use image::EncodableLayout;
 use log::error;
-use pixels::{Error, Pixels, SurfaceTexture};
+use pixels::{Pixels, SurfaceTexture};
+use std::iter::zip;
 use winit::dpi::LogicalSize;
 use winit::event::{Event, VirtualKeyCode};
 use winit::event_loop::{ControlFlow, EventLoop};
@@ -13,9 +15,11 @@ use winit_input_helper::WinitInputHelper;
 
 mod gui;
 
-const WIDTH: u32 = 640;
-const HEIGHT: u32 = 480;
-const BOX_SIZE: i16 = 64;
+const X_BOXES: u32 = 15;
+const Y_BOXES: u32 = 11;
+const WIDTH: u32 = BOX_SIZE as u32 * X_BOXES;
+const HEIGHT: u32 = BOX_SIZE as u32 * Y_BOXES;
+const BOX_SIZE: i16 = 32;
 
 /// Representation of the application state. In this example, a box will bounce around the screen.
 struct World {
@@ -25,16 +29,22 @@ struct World {
     velocity_y: i16,
 }
 
-fn main() -> Result<(), Error> {
+fn main() -> anyhow::Result<()> {
     env_logger::init();
+    let player_icon_file = COTW2ICONS.get_file("323.ico").unwrap();
+    let player_icon = ::image::load_from_memory(player_icon_file.contents())?;
+    let all_icon_images: Vec<_> = COTW2ICONS.entries().iter().map(|item| {
+        let contents = item.as_file().unwrap().contents();
+        ::image::load_from_memory(contents).unwrap().to_rgba8()
+    }).collect();
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let window = {
-        let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
+        let size = LogicalSize::new(640f64, 480f64);
         WindowBuilder::new()
             .with_title("Hello Pixels + egui")
             .with_inner_size(size)
-            .with_min_inner_size(size)
+            // .with_min_inner_size(size)
             .build(&event_loop)
             .unwrap()
     };
@@ -94,6 +104,29 @@ fn main() -> Result<(), Error> {
             Event::RedrawRequested(_) => {
                 // Draw the world
                 world.draw(pixels.frame_mut());
+                let player_tile = ((X_BOXES / 2) as usize, (Y_BOXES / 2) as usize);
+                let dst_tiles = (0..Y_BOXES as usize)
+                    .into_iter()
+                    .map(|y| (0..X_BOXES as usize).into_iter().map(move |x| (x, y)))
+                    .flatten();
+                let src_icon_tile = (0, 0);
+                for (dst_tile, icon) in zip(dst_tiles, &all_icon_images) {
+                    draw_cotw_icon(
+                        &mut pixels,
+                        dst_tile,
+                        src_icon_tile,
+                        &icon,
+                    );
+                }
+
+                if true {
+                    draw_cotw_icon(
+                        &mut pixels,
+                        player_tile,
+                        src_icon_tile,
+                        &player_icon.to_rgba8(),
+                    )
+                }
 
                 // Prepare egui
                 framework.prepare(&window);
@@ -118,6 +151,35 @@ fn main() -> Result<(), Error> {
             _ => (),
         }
     });
+}
+
+static COTW2ICONS: include_dir::Dir =
+    include_dir::include_dir!("$CARGO_MANIFEST_DIR/src/cotw2icons");
+
+fn draw_cotw_icon(
+    pixels: &mut Pixels,
+    dst_tile: (usize, usize),
+    src_tile: (usize, usize),
+    icons: &image::RgbaImage,
+) {
+    let pixels_width = pixels.texture().width() as usize;
+    let icon_dim = BOX_SIZE as usize;
+    let bytes_per_pixel = 4;
+    for y in 0..icon_dim {
+        let dst: &mut [u8] = &mut pixels.frame_mut()[bytes_per_pixel
+            * ((dst_tile.1 * icon_dim + y) * pixels_width + dst_tile.0 * icon_dim)..];
+        let src_index = bytes_per_pixel
+            * ((src_tile.1 * icon_dim + y) * icons.width() as usize + icon_dim * src_tile.0);
+        let src = &icons.as_bytes()[src_index..];
+        let copy_len = bytes_per_pixel * icon_dim;
+        for (dst, src) in zip(dst.chunks_exact_mut(4), src.chunks_exact(4)).take(icon_dim) {
+            if src[3] == 0 {
+                continue;
+            }
+            dst.copy_from_slice(src);
+        }
+        // dst[..copy_len].copy_from_slice(&src[..copy_len]);
+    }
 }
 
 fn log_error<E: std::error::Error + 'static>(method_name: &str, err: E) {

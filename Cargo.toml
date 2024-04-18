@@ -21,6 +21,7 @@ include = [
 
 [dependencies]
 bytemuck = "1.12"
+image = "0.25.1"
 raw-window-handle = "0.5"
 thiserror = "1.0"
 ultraviolet = "0.9"
