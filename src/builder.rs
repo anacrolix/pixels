@@ -17,6 +17,7 @@ pub struct PixelsBuilder<'req, 'dev, 'win, W: HasRawWindowHandle + HasRawDisplay
     surface_texture_format: Option<wgpu::TextureFormat>,
     clear_color: wgpu::Color,
     blend_state: wgpu::BlendState,
+    pixels_offset: (f32, f32),
 }
 
 impl<'req, 'dev, 'win, W: HasRawWindowHandle + HasRawDisplayHandle>
@@ -64,6 +65,7 @@ impl<'req, 'dev, 'win, W: HasRawWindowHandle + HasRawDisplayHandle>
             surface_texture_format: None,
             clear_color: wgpu::Color::BLACK,
             blend_state: wgpu::BlendState::ALPHA_BLENDING,
+            pixels_offset: (0., 0.),
         }
     }
 
@@ -313,6 +315,7 @@ impl<'req, 'dev, 'win, W: HasRawWindowHandle + HasRawDisplayHandle>
                 // Clear color and blending values
                 clear_color,
                 blend_state,
+                self.pixels_offset,
             )?;
 
         // Create the pixel buffer
@@ -422,6 +425,7 @@ pub(crate) fn create_backing_texture(
     render_texture_format: wgpu::TextureFormat,
     clear_color: wgpu::Color,
     blend_state: wgpu::BlendState,
+    scaling_renderer_offset: (f32, f32),
 ) -> Result<
     (
         ultraviolet::Mat4,
@@ -437,6 +441,7 @@ pub(crate) fn create_backing_texture(
     let scaling_matrix_inverse = ScalingMatrix::new(
         (width as f32, height as f32),
         (surface_size.width as f32, surface_size.height as f32),
+        (0., 0.),
     )
     .transform
     .inversed();

@@ -20,8 +20,7 @@ pub(crate) struct Framework {
 
 /// Example application state. A real application will need a lot more state than this.
 struct Gui {
-    /// Only show the egui window when true.
-    window_open: bool,
+    inventory_open: bool,
 }
 
 impl Framework {
@@ -76,18 +75,20 @@ impl Framework {
     }
 
     /// Prepare egui.
-    pub(crate) fn prepare(&mut self, window: &Window) {
+    pub(crate) fn prepare(&mut self, window: &Window) -> f32 {
         // Run the egui frame and create all paint jobs to prepare for rendering.
         let raw_input = self.egui_state.take_egui_input(window);
+        let mut ret = 0.;
         let output = self.egui_ctx.run(raw_input, |egui_ctx| {
             // Draw the demo application.
-            self.gui.ui(egui_ctx);
+            ret = self.gui.ui(egui_ctx);
         });
 
         self.textures.append(output.textures_delta);
         self.egui_state
             .handle_platform_output(window, &self.egui_ctx, output.platform_output);
         self.paint_jobs = self.egui_ctx.tessellate(output.shapes);
+        ret
     }
 
     /// Render egui.
@@ -140,35 +141,37 @@ impl Framework {
 impl Gui {
     /// Create a `Gui`.
     fn new() -> Self {
-        Self { window_open: true }
+        Self {
+            inventory_open: true,
+        }
     }
 
     /// Create the UI using egui.
-    fn ui(&mut self, ctx: &Context) {
-        egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
+    fn ui(&mut self, ctx: &Context) -> f32 {
+        let menu_panel = egui::TopBottomPanel::top("menubar_container").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("About...").clicked() {
-                        self.window_open = true;
+                ui.menu_button("Game", |ui| {
+                    ui.add_enabled(false, egui::Button::new("Logout"));
+                });
+                ui.menu_button("Menus", |ui| {
+                    ui.button("Skills");
+                    if ui.button("Inventory").clicked() {
+                        self.inventory_open = true;
                         ui.close_menu();
                     }
-                })
+                    ui.add_enabled(false, egui::Button::new("Map"));
+                });
+                // ui.add_enabled(false,|ui: &mut egui::Ui|ui.menu_button("Help", |ui|ui.button("wat")));
             });
         });
 
-        egui::Window::new("Hello, egui!")
-            .open(&mut self.window_open)
+        egui::Window::new("Main backpack")
+            .open(&mut self.inventory_open)
             .show(ctx, |ui| {
-                ui.label("This example demonstrates using egui with pixels.");
-                ui.label("Made with 💖 in San Francisco!");
-
+                ui.label("Backpack");
                 ui.separator();
-
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x /= 2.0;
-                    ui.label("Learn more about egui at");
-                    ui.hyperlink("https://docs.rs/egui");
-                });
             });
+
+        menu_panel.response.rect.bottom()
     }
 }

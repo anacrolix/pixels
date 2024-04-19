@@ -33,10 +33,14 @@ fn main() -> anyhow::Result<()> {
     env_logger::init();
     let player_icon_file = COTW2ICONS.get_file("323.ico").unwrap();
     let player_icon = ::image::load_from_memory(player_icon_file.contents())?;
-    let all_icon_images: Vec<_> = COTW2ICONS.entries().iter().map(|item| {
-        let contents = item.as_file().unwrap().contents();
-        ::image::load_from_memory(contents).unwrap().to_rgba8()
-    }).collect();
+    let all_icon_images: Vec<_> = COTW2ICONS
+        .entries()
+        .iter()
+        .map(|item| {
+            let contents = item.as_file().unwrap().contents();
+            ::image::load_from_memory(contents).unwrap().to_rgba8()
+        })
+        .collect();
     let event_loop = EventLoop::new();
     let mut input = WinitInputHelper::new();
     let window = {
@@ -65,6 +69,8 @@ fn main() -> anyhow::Result<()> {
         (pixels, framework)
     };
     let mut world = World::new();
+    let mut window_size = ::winit::dpi::PhysicalSize::<u32>::new(WIDTH, HEIGHT);
+    let mut pixels_size = None;
 
     event_loop.run(move |event, _, control_flow| {
         // Handle input events
@@ -82,6 +88,7 @@ fn main() -> anyhow::Result<()> {
 
             // Resize the window
             if let Some(size) = input.window_resized() {
+                window_size = size;
                 if let Err(err) = pixels.resize_surface(size.width, size.height) {
                     log_error("pixels.resize_surface", err);
                     *control_flow = ControlFlow::Exit;
@@ -111,12 +118,7 @@ fn main() -> anyhow::Result<()> {
                     .flatten();
                 let src_icon_tile = (0, 0);
                 for (dst_tile, icon) in zip(dst_tiles, &all_icon_images) {
-                    draw_cotw_icon(
-                        &mut pixels,
-                        dst_tile,
-                        src_icon_tile,
-                        &icon,
-                    );
+                    draw_cotw_icon(&mut pixels, dst_tile, src_icon_tile, &icon);
                 }
 
                 if true {
@@ -129,7 +131,16 @@ fn main() -> anyhow::Result<()> {
                 }
 
                 // Prepare egui
-                framework.prepare(&window);
+                let world_top = framework.prepare(&window);
+
+                let mut view_size = window_size;
+                view_size.height -= world_top as u32;
+                dbg!(world_top);
+                if Some(view_size) != pixels_size {
+                    pixels_size = Some(view_size);
+                }
+
+                pixels.set_render_target(window_size.width, window_size.height-world_top as u32, (0., world_top));
 
                 // Render everything together
                 let render_result = pixels.render_with(|encoder, render_target, context| {

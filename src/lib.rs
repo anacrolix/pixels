@@ -323,6 +323,7 @@ impl Pixels {
                 self.render_texture_format,
                 self.context.scaling_renderer.clear_color,
                 self.blend_state,
+                (0., 0.),
             )?;
 
         self.scaling_matrix_inverse = scaling_matrix_inverse;
@@ -367,6 +368,7 @@ impl Pixels {
                 self.context.texture_extent.height as f32,
             ),
             (width as f32, height as f32),
+            (0., 0.),
         )
         .transform
         .inversed();
@@ -377,7 +379,7 @@ impl Pixels {
         // Update state for all render passes
         self.context
             .scaling_renderer
-            .resize(&self.context.queue, width, height);
+            .resize(&self.context.queue, width, height, (0., 0.));
 
         Ok(())
     }
@@ -685,6 +687,12 @@ impl Pixels {
     /// Provides access to the internal [`PixelsContext`].
     pub fn context(&self) -> &PixelsContext {
         &self.context
+    }
+
+    pub fn set_render_target(&mut self, width: u32, height: u32, offset: (f32, f32)) {
+        let queue = &self.context.queue;
+        let scaling_renderer = &mut self.context.scaling_renderer;
+        scaling_renderer.resize(queue, width, height, offset);
     }
 
     /// Get the surface texture format.

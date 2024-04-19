@@ -72,6 +72,7 @@ impl ScalingRenderer {
         let matrix = ScalingMatrix::new(
             (texture_size.width as f32, texture_size.height as f32),
             (surface_size.width as f32, surface_size.height as f32),
+            (0., 0.),
         );
         let transform_bytes = matrix.as_bytes();
         let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -192,6 +193,7 @@ impl ScalingRenderer {
         rpass.set_pipeline(&self.render_pipeline);
         rpass.set_bind_group(0, &self.bind_group, &[]);
         rpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+        dbg!(&self.clip_rect);
         rpass.set_scissor_rect(
             self.clip_rect.0,
             self.clip_rect.1,
@@ -208,8 +210,12 @@ impl ScalingRenderer {
         self.clip_rect
     }
 
-    pub(crate) fn resize(&mut self, queue: &wgpu::Queue, width: u32, height: u32) {
-        let matrix = ScalingMatrix::new((self.width, self.height), (width as f32, height as f32));
+    pub fn resize(&mut self, queue: &wgpu::Queue, width: u32, height: u32, offset: (f32, f32)) {
+        let matrix = ScalingMatrix::new(
+            (self.width, self.height),
+            (width as f32, height as f32),
+            offset,
+        );
         let transform_bytes = matrix.as_bytes();
         queue.write_buffer(&self.uniform_buffer, 0, transform_bytes);
 
@@ -226,24 +232,33 @@ pub(crate) struct ScalingMatrix {
 impl ScalingMatrix {
     // texture_size is the dimensions of the drawing texture
     // screen_size is the dimensions of the surface being drawn to
-    pub(crate) fn new(texture_size: (f32, f32), screen_size: (f32, f32)) -> Self {
+    pub(crate) fn new(
+        texture_size: (f32, f32),
+        target_size: (f32, f32),
+        offset: (f32, f32),
+    ) -> Self {
         let (texture_width, texture_height) = texture_size;
-        let (screen_width, screen_height) = screen_size;
+        let (target_width, target_height) = target_size;
+        let screen_height = target_height+offset.1;
+        dbg!(screen_height, offset);
 
-        let width_ratio = screen_width / texture_width;
-        let height_ratio = screen_height / texture_height;
+        let width_ratio = target_width / texture_width;
+        let height_ratio = target_height / texture_height;
 
         // Get smallest scale size
-        let scale = width_ratio.min( height_ratio);
+        let scale = width_ratio.min(height_ratio);
 
         let scaled_width = texture_width * scale;
         let scaled_height = texture_height * scale;
+        dbg!(scaled_height, screen_height, target_height);
 
         // Create a transformation matrix
-        let sw = scaled_width / screen_width;
-        let sh = scaled_height / screen_height;
-        let tx = (screen_width / 2.0).fract() / screen_width;
-        let ty = (screen_height / 2.0).fract() / screen_height;
+        let sw = scaled_width / target_width;
+        let sh = scaled_height / target_height;
+        let tx = (target_width / 2.0).fract() / target_width;
+        let ty_pixels = (screen_height/2.0).fract()/screen_height-offset.1*2./screen_height;
+        dbg!(ty_pixels, screen_height);
+        let ty = ty_pixels;
         #[rustfmt::skip]
         let transform: [f32; 16] = [
             sw,  0.0, 0.0, 0.0,
@@ -254,12 +269,12 @@ impl ScalingMatrix {
 
         // Create a clipping rectangle
         let clip_rect = {
-            let scaled_width = scaled_width.min(screen_width);
+            let scaled_width = scaled_width.min(target_width);
             let scaled_height = scaled_height.min(screen_height);
-            let x = ((screen_width - scaled_width) / 2.0) as u32;
-            let y = ((screen_height - scaled_height) / 2.0) as u32;
+            let x = ((target_width - scaled_width) / 2.0) as u32;
+            let y = ((target_height-scaled_height)/2.0+offset.1) as u32;
 
-            (x, y, scaled_width as u32, scaled_height as u32)
+            (x, y, scaled_width as u32, (scaled_height) as u32)
         };
 
         Self {
