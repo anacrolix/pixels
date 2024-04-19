@@ -229,21 +229,25 @@ impl ScalingMatrix {
     pub(crate) fn new(texture_size: (f32, f32), screen_size: (f32, f32)) -> Self {
         let (texture_width, texture_height) = texture_size;
         let (screen_width, screen_height) = screen_size;
+        let margin_top = 24.;
+        let target_height = screen_height - margin_top;
 
-        let width_ratio = (screen_width / texture_width).max(1.0);
-        let height_ratio = (screen_height / texture_height).max(1.0);
+        let width_ratio = (screen_width / texture_width);
+        let height_ratio = (target_height / texture_height);
 
         // Get smallest scale size
-        let scale = width_ratio.clamp(1.0, height_ratio).floor();
+        let scale = width_ratio.min(height_ratio);
 
         let scaled_width = texture_width * scale;
         let scaled_height = texture_height * scale;
 
         // Create a transformation matrix
         let sw = scaled_width / screen_width;
-        let sh = scaled_height / screen_height;
+        let sh = scaled_height / target_height;
         let tx = (screen_width / 2.0).fract() / screen_width;
-        let ty = (screen_height / 2.0).fract() / screen_height;
+        let ty = ((screen_height / 2.0).fract()-margin_top*2.) / screen_height;
+        dbg!(sw, sh);
+
         #[rustfmt::skip]
         let transform: [f32; 16] = [
             sw,  0.0, 0.0, 0.0,
@@ -255,9 +259,10 @@ impl ScalingMatrix {
         // Create a clipping rectangle
         let clip_rect = {
             let scaled_width = scaled_width.min(screen_width);
-            let scaled_height = scaled_height.min(screen_height);
+            dbg!(scaled_height, target_height);
+            let scaled_height = scaled_height.min(target_height);
             let x = ((screen_width - scaled_width) / 2.0) as u32;
-            let y = ((screen_height - scaled_height) / 2.0) as u32;
+            let y = ((target_height - scaled_height) / 2.0 + margin_top) as u32;
 
             (x, y, scaled_width as u32, scaled_height as u32)
         };

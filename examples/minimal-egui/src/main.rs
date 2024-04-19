@@ -13,9 +13,9 @@ use winit_input_helper::WinitInputHelper;
 
 mod gui;
 
-const WIDTH: u32 = 640;
-const HEIGHT: u32 = 480;
-const BOX_SIZE: i16 = 64;
+const WIDTH: u32 = BOX_SIZE as u32*15;
+const HEIGHT: u32 = BOX_SIZE as u32*11;
+const BOX_SIZE: i16 = 32;
 
 /// Representation of the application state. In this example, a box will bounce around the screen.
 struct World {
@@ -34,7 +34,7 @@ fn main() -> Result<(), Error> {
         WindowBuilder::new()
             .with_title("Hello Pixels + egui")
             .with_inner_size(size)
-            .with_min_inner_size(size)
+            // .with_min_inner_size(size)
             .build(&event_loop)
             .unwrap()
     };
@@ -132,9 +132,9 @@ impl World {
     fn new() -> Self {
         Self {
             box_x: 24,
-            box_y: 16,
+            box_y: 160,
             velocity_x: 1,
-            velocity_y: 1,
+            velocity_y: -1,
         }
     }
 
@@ -155,6 +155,7 @@ impl World {
     ///
     /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
     fn draw(&self, frame: &mut [u8]) {
+        let boundary = [0, BOX_SIZE - 1];
         for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
             let x = (i % WIDTH as usize) as i16;
             let y = (i / WIDTH as usize) as i16;
@@ -166,6 +167,8 @@ impl World {
 
             let rgba = if inside_the_box {
                 [0x5e, 0x48, 0xe8, 0xff]
+            } else if boundary.contains(&(x % BOX_SIZE)) || boundary.contains(&(y % BOX_SIZE)) {
+                [0xff, 0xff, 0xff, 0xff]
             } else {
                 [0x48, 0xb2, 0xe8, 0xff]
             };
