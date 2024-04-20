@@ -13,8 +13,8 @@ use winit_input_helper::WinitInputHelper;
 
 mod gui;
 
-const WIDTH: u32 = BOX_SIZE as u32*15;
-const HEIGHT: u32 = BOX_SIZE as u32*11;
+const WIDTH: u32 = BOX_SIZE as u32 * 15;
+const HEIGHT: u32 = BOX_SIZE as u32 * 11;
 const BOX_SIZE: i16 = 32;
 
 /// Representation of the application state. In this example, a box will bounce around the screen.
