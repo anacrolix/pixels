@@ -243,9 +243,9 @@ impl ScalingMatrix {
 
         // Create a transformation matrix
         let sw = scaled_width / screen_width;
-        let sh = scaled_height / target_height;
+        let sh = scaled_height / screen_height;
         let tx = (screen_width / 2.0).fract() / screen_width;
-        let ty = ((screen_height / 2.0).fract()-margin_top*2.) / screen_height;
+        let ty = ((screen_height / 2.0).fract() - margin_top) / screen_height;
         dbg!(sw, sh);
 
         #[rustfmt::skip]
