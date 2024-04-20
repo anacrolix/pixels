@@ -239,7 +239,8 @@ impl ScalingMatrix {
     ) -> Self {
         let (texture_width, texture_height) = texture_size;
         let (target_width, target_height) = target_size;
-        let screen_height = target_height+offset.1;
+        let screen_height = target_height + offset.1;
+        let screen_width = target_width + offset.0;
         dbg!(screen_height, offset);
 
         let width_ratio = target_width / texture_width;
@@ -253,10 +254,10 @@ impl ScalingMatrix {
         dbg!(scaled_height, screen_height, target_height);
 
         // Create a transformation matrix
-        let sw = scaled_width / target_width;
-        let sh = scaled_height / target_height;
+        let sw = scaled_width / screen_width;
+        let sh = scaled_height / screen_height;
         let tx = (target_width / 2.0).fract() / target_width;
-        let ty_pixels = (screen_height/2.0).fract()/screen_height-offset.1*2./screen_height;
+        let ty_pixels = (screen_height / 2.0).fract() / screen_height - offset.1 / screen_height;
         dbg!(ty_pixels, screen_height);
         let ty = ty_pixels;
         #[rustfmt::skip]
@@ -272,7 +273,7 @@ impl ScalingMatrix {
             let scaled_width = scaled_width.min(target_width);
             let scaled_height = scaled_height.min(screen_height);
             let x = ((target_width - scaled_width) / 2.0) as u32;
-            let y = ((target_height-scaled_height)/2.0+offset.1) as u32;
+            let y = ((target_height - scaled_height) / 2.0 + offset.1) as u32;
 
             (x, y, scaled_width as u32, (scaled_height) as u32)
         };

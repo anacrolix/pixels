@@ -140,7 +140,11 @@ fn main() -> anyhow::Result<()> {
                     pixels_size = Some(view_size);
                 }
 
-                pixels.set_render_target(window_size.width, window_size.height-world_top as u32, (0., world_top));
+                pixels.set_render_target(
+                    window_size.width,
+                    window_size.height - world_top as u32,
+                    (0., world_top),
+                );
 
                 // Render everything together
                 let render_result = pixels.render_with(|encoder, render_target, context| {
