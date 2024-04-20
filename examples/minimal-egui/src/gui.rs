@@ -142,7 +142,7 @@ impl Gui {
     /// Create a `Gui`.
     fn new() -> Self {
         Self {
-            inventory_open: true,
+            inventory_open: false,
         }
     }
 
